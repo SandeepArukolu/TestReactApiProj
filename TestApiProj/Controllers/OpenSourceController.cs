@@ -64,7 +64,6 @@ namespace TestApiProj.Controllers
         [HttpGet("GetAllItems")]
         public async Task<IActionResult> GetAllItems()
         {
-            throw new DivideByZeroException();
             var Items = await _Context.Items.ToListAsync();
             return Ok(Items);
         }

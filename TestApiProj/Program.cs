@@ -46,29 +46,29 @@ builder.Services.AddAuthorization(options =>
 });
 
 ////Enable cors
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAnyOrigin", policy =>
-    {
-        policy.AllowAnyOrigin() // This allows any origin
-              .AllowAnyMethod()  // This allows any HTTP method (GET, POST, etc.)
-              .AllowAnyHeader();  // This allows any header
-    });
-});
-
 //builder.Services.AddCors(options =>
 //{
-//    options.AddPolicy("AllowVercel",
-//        policy =>
-//        {
-//            policy
-//                .WithOrigins(
-//                    "https://react-opensource-project-forntend-v.vercel.app"
-//                )
-//                .AllowAnyHeader()
-//                .AllowAnyMethod();
-//        });
+//    options.AddPolicy("AllowAnyOrigin", policy =>
+//    {
+//        policy.AllowAnyOrigin() // This allows any origin
+//              .AllowAnyMethod()  // This allows any HTTP method (GET, POST, etc.)
+//              .AllowAnyHeader();  // This allows any header
+//    });
 //});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowVercel",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "https://react-opensource-project-forntend-v.vercel.app"
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
 
 // Add Swagger services
 builder.Services.AddEndpointsApiExplorer();
@@ -130,8 +130,8 @@ app.UseAuthorization();   // Add authorization middleware
 app.UseSwagger();
 app.UseSwaggerUI();
 // Enable CORS globally
-app.UseCors("AllowAnyOrigin");
-//app.UseCors("AllowVercel");
+//app.UseCors("AllowAnyOrigin");
+app.UseCors("AllowVercel");
 
 app.UseHttpsRedirection();
 
