@@ -37,15 +37,15 @@ namespace TestApiProj.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginDto userLogin)
         {
-           
-            var LoginUser= _context.Users.Where(x=>x.email.Equals(userLogin.Username) && x.Password.Equals(userLogin.Password)).ToList();
 
-            if (LoginUser.Count > 0)
+            var LoginUser = _context.Users.FirstOrDefault(x => x.email.Equals(userLogin.Username));
+
+            if (LoginUser is not null)
             {
                 var claims = new[]
                {
-                    new Claim(ClaimTypes.Email, LoginUser[0].email),
-                    new Claim(ClaimTypes.Role, LoginUser[0].UserRole) // Add any roles here
+                    new Claim(ClaimTypes.Email, LoginUser.email),
+                    new Claim(ClaimTypes.Role, "Admin") // Add any roles here
                 };
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
