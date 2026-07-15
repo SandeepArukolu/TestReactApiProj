@@ -38,7 +38,8 @@ namespace TestApiProj.Controllers
         public async Task<IActionResult> Login([FromBody] UserLoginDto userLogin)
         {
 
-            var LoginUser = _context.Users.FirstOrDefault(x => x.email.Equals(userLogin.Username));
+            var Users = await _operations.GetAllAsync();
+            var LoginUser = Users.FirstOrDefault(x => x.email.Equals(userLogin.Username));
 
             if (LoginUser is not null)
             {
