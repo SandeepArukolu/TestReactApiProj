@@ -1,8 +1,9 @@
+
 using TestApiProj.DataAccess;
 using TestApiProj.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;  
+using System.Text;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using TestApiProj.Models;
@@ -11,10 +12,14 @@ using Microsoft.EntityFrameworkCore;
 using TestApiProj.Middlewares;
 using Serilog;
 
+// Disable file watchers for Render
+Environment.SetEnvironmentVariable(
+    "DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE",
+    "false");
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
 
 // Configure JWT Authentication
@@ -31,13 +36,14 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],  // Ensure these keys exist in your appsettings.json
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]))
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"] ?? string.Empty))
     };
 });
 
-//Configure Roles
+// Configure Roles
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
@@ -45,32 +51,31 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("SuperAdmin", policy => policy.RequireRole("SuperAdmin"));
 });
 
-////Enable cors
+// Enable CORS
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAnyOrigin", policy =>
+//    {
+//        policy.AllowAnyOrigin()
+//              .AllowAnyMethod()
+//              .AllowAnyHeader();
+//    });
+//});
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAnyOrigin", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.AllowAnyOrigin() // This allows any origin
-              .AllowAnyMethod()  // This allows any HTTP method (GET, POST, etc.)
-              .AllowAnyHeader();  // This allows any header
+        policy.WithOrigins(
+            "http://localhost:7053",
+            "https://react-opensource-project-forntend-v.vercel.app"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod();
     });
 });
 
-//builder.Services.AddCors(options =>
-//{
-//    options.AddPolicy("AllowVercel",
-//        policy =>
-//        {
-//            policy
-//                .WithOrigins(
-//                    "https://react-opensource-project-forntend-v.vercel.app"
-//                )
-//                .AllowAnyHeader()
-//                .AllowAnyMethod();
-//        });
-//});
-
-// Add Swagger services
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -93,78 +98,75 @@ builder.Services.AddSwaggerGen(c =>
                     Id = "Bearer"
                 }
             },
-            new string[] { }
+            Array.Empty<string>()
         }
     });
 });
 
-// Register memory caching
+// Memory cache
 builder.Services.AddMemoryCache();
+
 // DI
 builder.Services.AddScoped<IOperations, Operations>();
 builder.Services.AddScoped<IInvoice, PdfInvoiceGenerator>();
 builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddHttpClient();
+
 builder.Services.AddDbContext<MyDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
-// Configure Serilog
+// Serilog
 Log.Logger = new LoggerConfiguration()
- .ReadFrom.Configuration(builder.Configuration)
- .CreateLogger();
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
 
 builder.Host.UseSerilog();
-
-
 
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
 
-// Configure the HTTP request pipeline.
-app.UseAuthentication();  // Add authentication middleware
-app.UseAuthorization();   // Add authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
-// Enable Swagger UI
 app.UseSwagger();
 app.UseSwaggerUI();
-// Enable CORS globally
-app.UseCors("AllowAnyOrigin");
-//app.UseCors("AllowVercel");
+
+app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
 
-// Map controllers for the API
 app.MapControllers();
 
-
-//Minimal Api
+// Minimal API
 app.MapGet("/call-minimalApi", async (IHttpClientFactory httpClientFactory) =>
 {
-    // Create a client using IHttpClientFactory
     var client = httpClientFactory.CreateClient();
 
-    // Define the external API URL
-    var url = "https://fakerapi.it/api/v1/users?locale=en_US&seed=12345";  // External API
+    var url = "https://fakerapi.it/api/v1/users?locale=en_US&seed=12345";
 
-    // Send a GET request to fetch the users
     HttpResponseMessage response = await client.GetAsync(url);
 
     if (response.IsSuccessStatusCode)
     {
         string responseBody = await response.Content.ReadAsStringAsync();
 
-        // Deserialize the response body into a list of EmployeeResponse objects
-        var employeeData = JsonConvert.DeserializeObject<EmployeeResponse>(responseBody);
+        var employeeData =
+            JsonConvert.DeserializeObject<EmployeeResponse>(responseBody);
 
-        // Return the deserialized data as JSON to the client
         return Results.Ok(employeeData);
     }
 
-    // Return an empty list or appropriate error response if API fails
-    return Results.NotFound(new List<EmployeeResponse>());
+    return Results.NotFound();
 });
 
+// Render Port Configuration
+var port = Environment.GetEnvironmentVariable("PORT");
+
+if (!string.IsNullOrEmpty(port))
+{
+    app.Urls.Add($"http://0.0.0.0:{port}");
+}
 
 app.Run();
