@@ -51,7 +51,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("SuperAdmin", policy => policy.RequireRole("SuperAdmin"));
 });
 
-// Enable CORS
+//// Enable CORS
 //builder.Services.AddCors(options =>
 //{
 //    options.AddPolicy("AllowAnyOrigin", policy =>
@@ -66,8 +66,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-            "http://localhost:7053",
+        policy.WithOrigins(        
             "https://react-opensource-project-forntend-v.vercel.app"
         )
         .AllowAnyHeader()
@@ -134,6 +133,9 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseCors("AllowFrontend");
+//app.UseCors("AllowAnyOrigin");
+
+
 
 app.UseHttpsRedirection();
 
