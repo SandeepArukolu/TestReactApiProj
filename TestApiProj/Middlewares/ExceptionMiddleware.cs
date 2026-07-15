@@ -34,7 +34,7 @@ namespace TestApiProj.Middlewares
                 var errorDetails = new ErrorDetails
                 {
                     StatusCode = httpContext.Response.StatusCode,
-                    Message = "An unexpected error occurred.",
+                    Message = $"An unexpected error occurred. {ex}",
                     StackTrace = _env.IsDevelopment() ? ex.StackTrace : null
                 };
 
