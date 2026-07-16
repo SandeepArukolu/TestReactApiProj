@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TestApiProj.DataClasses;
 using TestApiProj.MainEntity;
 using TestApiProj.Models;
 using TestApiProj.Services;
@@ -64,7 +65,7 @@ namespace TestApiProj.Controllers
         [HttpGet("GetAllItems")]
         public async Task<IActionResult> GetAllItems()
         {
-            var Items = await _Context.Items.ToListAsync();
+            var Items = ItemData.Items;
             return Ok(Items);
         }
 

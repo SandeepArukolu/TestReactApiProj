@@ -37,7 +37,6 @@ namespace TestApiProj.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginDto userLogin)
         {
-
             var Users = await _operations.GetAllAsync();
             var LoginUser = Users.FirstOrDefault(x => x.email.Equals(userLogin.Username));
 
@@ -46,7 +45,7 @@ namespace TestApiProj.Controllers
                 var claims = new[]
                {
                     new Claim(ClaimTypes.Email, LoginUser.email),
-                    new Claim(ClaimTypes.Role, "Admin") // Add any roles here
+                    new Claim(ClaimTypes.Role, "SuperAdmin") // Add any roles here
                 };
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
