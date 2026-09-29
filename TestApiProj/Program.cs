@@ -9,10 +9,8 @@ using System.Text;
 using TestApiProj.DataAccess;
 using TestApiProj.Mapping;
 using TestApiProj.Middlewares;
-using TestApiProj.Models;
 using TestApiProj.Models.FakerapiModel;
 using TestApiProj.Services;
-using AutoMapper;
 
 // Disable file watchers for Render
 Environment.SetEnvironmentVariable(
@@ -58,16 +56,16 @@ builder.Services.AddAuthorization(options =>
 
 ////// Enable CORS
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowLocalOrigin", policy =>
-    {
-        policy.WithOrigins("http://localhost:3000")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
-    });
-});
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowLocalOrigin", policy =>
+//    {
+//        policy.WithOrigins("http://localhost:3000")
+//              .AllowAnyMethod()
+//              .AllowAnyHeader()
+//              .AllowCredentials();
+//    });
+//});
 
 //builder.Services.AddCors(options =>
 //{
@@ -79,17 +77,17 @@ builder.Services.AddCors(options =>
 //    });
 //});
 
-//builder.Services.AddCors(options =>
-//{
-//    options.AddPolicy("AllowFrontend", policy =>
-//    {
-//        policy.WithOrigins(
-//            "https://react-opensource-project-forntend-m.vercel.app"
-//        )
-//        .AllowAnyHeader()
-//        .AllowAnyMethod();
-//    });
-//});
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins(
+            "https://react-opensource-project-forntend-m.vercel.app"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+    });
+});
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -143,7 +141,8 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowLocalOrigin");
+app.UseCors("AllowFrontend");
+//app.UseCors("AllowLocalOrigin");
 
 app.UseAuthentication();
 
