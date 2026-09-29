@@ -1,15 +1,17 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using TestApiProj.DTOS;
 using TestApiProj.MainEntity;
 using TestApiProj.Models;
 using TestApiProj.Services;
+
 
 namespace TestApiProj.Controllers
 {
@@ -18,13 +20,13 @@ namespace TestApiProj.Controllers
     public class TestController : ControllerBase
     {
         private readonly IOperations _operations;
-        private readonly IConfiguration _configuration;
         private readonly MyDbContext _context;
-        public TestController(IOperations operations, IConfiguration configuration, MyDbContext context)
+        private readonly IMapper _mapper;
+        public TestController(IOperations operations, MyDbContext context, IMapper mapper)
         {
             _operations = operations;
-            _configuration = configuration;
             _context = context;
+            _mapper = mapper;
         }
 
         [HttpGet("GetAllusers")]
@@ -37,32 +39,48 @@ namespace TestApiProj.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginDto userLogin)
         {
-            var Users = await _operations.GetAllAsync();
-            var LoginUser = Users.FirstOrDefault(x => x.email.Equals(userLogin.Username));
-
-            if (LoginUser is not null)
+            try
             {
-                var claims = new[]
-               {
-                    new Claim(ClaimTypes.Email, LoginUser.email),
-                    new Claim(ClaimTypes.Role, "SuperAdmin") // Add any roles here
-                };
+                var Users = await _operations.GetAllAsync();
+                userLogin.Username = "Sincere@april.biz";
+                var LoginUser = Users.FirstOrDefault(x => x.email.Equals(userLogin.Username));
 
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
-                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                if (LoginUser is not null)
+                {
+                    string accesToken = await _operations.GenerateAccesToken(LoginUser);
+                    string refreshToken = await _operations.GenerateRefreshToken();
 
-                var token = new JwtSecurityToken(
-                    issuer: _configuration["Jwt:Issuer"],
-                    audience: _configuration["Jwt:Audience"],
-                    claims: claims,
-                    expires: DateTime.Now.AddMinutes(20),
-                    signingCredentials: creds
-                );
+                    var refreshTokenObject = new RefreshTokensDTO
+                    {
+                        Token = refreshToken,
+                        UserId = LoginUser.Id.ToString(),
+                        Expires = DateTime.UtcNow.AddDays(7)
+                    };
 
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var jwtToken = tokenHandler.WriteToken(token);
+                    var checkRefreshToken = Request.Cookies["refreshToken"];
 
-                return Ok(new AuthResponse { Token = jwtToken });
+                    var mapping = _mapper.Map<RefreshToken>(refreshTokenObject);
+
+                    _context.RefreshTokens.Add(mapping);
+                    _context.SaveChanges();
+
+                    Response.Cookies.Append(
+                   "refreshToken",
+                   refreshToken,
+                   new CookieOptions
+                   {
+                       HttpOnly = true,
+                       Secure = true,
+                       SameSite = SameSiteMode.None,
+                       Expires = DateTime.UtcNow.AddDays(7)
+                   });
+
+                    return Ok(new AuthResponse { Token = accesToken });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
 
             return Unauthorized("Invalid username or password");
@@ -70,14 +88,38 @@ namespace TestApiProj.Controllers
         [HttpPost("AddUsers")]
         public async Task<IActionResult> AddUsers()
         {
-           var val = await _operations.AddUserDetails();
+            var val = await _operations.AddUserDetails();
             return Ok(val);
-                
+
         }
 
+        [HttpPost("RefreshToken")]
+        public async Task<IActionResult> RefreshToken()
+        {
+                var refreshToken =
+                Request.Cookies["refreshToken"];
 
+            if (string.IsNullOrEmpty(refreshToken))
+                return Unauthorized();
 
-        
+            var storedToken =  await _context.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshToken);
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == Convert.ToInt32(storedToken.UserId));
+
+            if (storedToken == null)
+            {
+                return Unauthorized();
+            }
+
+            var newAccessToken = user != null ? 
+                _operations.GenerateAccesToken(
+                    user) : null;
+
+            return Ok(new
+            {
+                AccessToken = newAccessToken
+            });
+        }
+
     }
 }
 

@@ -7,5 +7,8 @@ namespace TestApiProj.Services
     {
        Task<List<User>> GetAllAsync();
         Task<string> AddUserDetails();
+
+       Task<string> GenerateAccesToken(User user);
+        Task<string> GenerateRefreshToken();
     }
 }

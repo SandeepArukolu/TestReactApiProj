@@ -1,16 +1,18 @@
 
-using TestApiProj.DataAccess;
-using TestApiProj.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
+using Serilog;
+using System.Text;
+using TestApiProj.DataAccess;
+using TestApiProj.Mapping;
+using TestApiProj.Middlewares;
 using TestApiProj.Models;
 using TestApiProj.Models.FakerapiModel;
-using Microsoft.EntityFrameworkCore;
-using TestApiProj.Middlewares;
-using Serilog;
+using TestApiProj.Services;
+using AutoMapper;
 
 // Disable file watchers for Render
 Environment.SetEnvironmentVariable(
@@ -21,6 +23,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile).Assembly);
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -36,6 +40,7 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+        ClockSkew = TimeSpan.Zero,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
@@ -52,6 +57,18 @@ builder.Services.AddAuthorization(options =>
 });
 
 ////// Enable CORS
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalOrigin", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 //builder.Services.AddCors(options =>
 //{
 //    options.AddPolicy("AllowAnyOrigin", policy =>
@@ -62,17 +79,17 @@ builder.Services.AddAuthorization(options =>
 //    });
 //});
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins(
-            "https://react-opensource-project-forntend-m.vercel.app"
-        )
-        .AllowAnyHeader()
-        .AllowAnyMethod();
-    });
-});
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowFrontend", policy =>
+//    {
+//        policy.WithOrigins(
+//            "https://react-opensource-project-forntend-m.vercel.app"
+//        )
+//        .AllowAnyHeader()
+//        .AllowAnyMethod();
+//    });
+//});
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -124,21 +141,23 @@ builder.Host.UseSerilog();
 
 var app = builder.Build();
 
-app.UseMiddleware<ExceptionMiddleware>();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.UseSwagger();
-app.UseSwaggerUI();
-
-app.UseCors("AllowFrontend");
-//app.UseCors("AllowAnyOrigin");
-
-
 app.UseHttpsRedirection();
 
+app.UseCors("AllowLocalOrigin");
+
+app.UseAuthentication();
+
+app.UseAuthorization();
+
 app.MapControllers();
+
+app.UseMiddleware<ExceptionMiddleware>();
+
+app.UseSwagger();
+
+app.UseSwaggerUI();
+
+
 
 // Minimal API
 app.MapGet("/call-minimalApi", async (IHttpClientFactory httpClientFactory) =>
