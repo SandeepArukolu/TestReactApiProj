@@ -36,55 +36,128 @@ namespace TestApiProj.Controllers
             return Ok(result);
         }
 
+        //[HttpPost("login")]
+        //public async Task<IActionResult> Login([FromBody] UserLoginDto userLogin)
+        //{
+        //    try
+        //    {
+        //        var Users = await _operations.GetAllAsync();
+        //        userLogin.Username = "Sincere@april.biz";
+        //        var LoginUser = Users.FirstOrDefault(x => x.email.Equals(userLogin.Username));
+
+        //        if (LoginUser is not null)
+        //        {
+        //            string accesToken = await _operations.GenerateAccesToken(LoginUser);
+        //            string refreshToken = await _operations.GenerateRefreshToken();
+
+        //            var refreshTokenObject = new RefreshTokensDTO
+        //            {
+        //                Token = refreshToken,
+        //                UserId = LoginUser.Id.ToString(),
+        //                Expires = DateTime.UtcNow.AddDays(7)
+        //            };
+
+        //            var checkRefreshToken = Request.Cookies["refreshToken"];
+
+        //            var mapping = _mapper.Map<RefreshToken>(refreshTokenObject);
+
+        //            _context.RefreshTokens.Add(mapping);
+        //            _context.SaveChanges();
+
+        //            Response.Cookies.Append(
+        //           "refreshToken",
+        //           refreshToken,
+        //           new CookieOptions
+        //           {
+        //               HttpOnly = true,
+        //               Secure = true,
+        //               SameSite = SameSiteMode.None,
+        //               Expires = DateTime.UtcNow.AddDays(7),
+        //               Path = "/"
+        //           });
+
+        //            return Ok(new AuthResponse { Token = accesToken });
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+
+        //    return Unauthorized("Invalid username or password");
+        //}
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginDto userLogin)
         {
             try
             {
-                var Users = await _operations.GetAllAsync();
+                var users = await _operations.GetAllAsync();
+
+                // Only for testing
                 userLogin.Username = "Sincere@april.biz";
-                var LoginUser = Users.FirstOrDefault(x => x.email.Equals(userLogin.Username));
 
-                if (LoginUser is not null)
+                var loginUser = users.FirstOrDefault(x =>
+                    x.email.Equals(
+                        userLogin.Username,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                );
+
+                if (loginUser is null)
                 {
-                    string accesToken = await _operations.GenerateAccesToken(LoginUser);
-                    string refreshToken = await _operations.GenerateRefreshToken();
-
-                    var refreshTokenObject = new RefreshTokensDTO
-                    {
-                        Token = refreshToken,
-                        UserId = LoginUser.Id.ToString(),
-                        Expires = DateTime.UtcNow.AddDays(7)
-                    };
-
-                    var checkRefreshToken = Request.Cookies["refreshToken"];
-
-                    var mapping = _mapper.Map<RefreshToken>(refreshTokenObject);
-
-                    _context.RefreshTokens.Add(mapping);
-                    _context.SaveChanges();
-
-                    Response.Cookies.Append(
-                   "refreshToken",
-                   refreshToken,
-                   new CookieOptions
-                   {
-                       HttpOnly = true,
-                       Secure = true,
-                       SameSite = SameSiteMode.None,
-                       Expires = DateTime.UtcNow.AddDays(7)
-                   });
-
-                    return Ok(new AuthResponse { Token = accesToken });
+                    return Unauthorized("Invalid username or password");
                 }
+
+                // Generate access token
+                string accessToken =
+                    await _operations.GenerateAccesToken(loginUser);
+
+                // Generate refresh token
+                string refreshToken =
+                    await _operations.GenerateRefreshToken();
+
+                var refreshTokenObject = new RefreshTokensDTO
+                {
+                    Token = refreshToken,
+                    UserId = loginUser.Id.ToString(),
+                    Expires = DateTime.UtcNow.AddDays(7)
+                };
+
+                var refreshTokenEntity =
+                    _mapper.Map<RefreshToken>(refreshTokenObject);
+
+                // Save refresh token in database
+                //await _context.RefreshTokens.AddAsync(refreshTokenEntity);
+                //await _context.SaveChangesAsync();
+
+                //// Store refresh token in HttpOnly cookie
+                //Response.Cookies.Append(
+                //    "refreshToken",
+                //    refreshToken,
+                //    new CookieOptions
+                //    {
+                //        HttpOnly = true,
+                //        Secure = true,
+                //        SameSite = SameSiteMode.None,
+                //        Expires = DateTimeOffset.UtcNow.AddDays(7),
+                //        Path = "/",
+                //        IsEssential = true
+                //    }
+                //);
+
+
+                return Ok(new AuthResponse
+                {
+                    Token = accessToken
+                });
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
-
-            return Unauthorized("Invalid username or password");
         }
+
         [HttpPost("AddUsers")]
         public async Task<IActionResult> AddUsers()
         {
