@@ -127,23 +127,23 @@ namespace TestApiProj.Controllers
                     _mapper.Map<RefreshToken>(refreshTokenObject);
 
                 // Save refresh token in database
-                await _context.RefreshTokens.AddAsync(refreshTokenEntity);
-                await _context.SaveChangesAsync();
+                //await _context.RefreshTokens.AddAsync(refreshTokenEntity);
+                //await _context.SaveChangesAsync();
 
-                // Store refresh token in HttpOnly cookie
-                Response.Cookies.Append(
-                    "refreshToken",
-                    refreshToken,
-                    new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = true,
-                        SameSite = SameSiteMode.None,
-                        Expires = DateTimeOffset.UtcNow.AddDays(7),
-                        Path = "/",
-                        IsEssential = true
-                    }
-                );
+                //// Store refresh token in HttpOnly cookie
+                //Response.Cookies.Append(
+                //    "refreshToken",
+                //    refreshToken,
+                //    new CookieOptions
+                //    {
+                //        HttpOnly = true,
+                //        Secure = true,
+                //        SameSite = SameSiteMode.None,
+                //        Expires = DateTimeOffset.UtcNow.AddDays(7),
+                //        Path = "/",
+                //        IsEssential = true
+                //    }
+                //);
 
 
                 return Ok(new AuthResponse
