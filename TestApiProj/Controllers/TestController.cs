@@ -94,7 +94,6 @@ namespace TestApiProj.Controllers
             {
                 var users = await _operations.GetAllAsync();
 
-                // Only for testing
                 userLogin.Username = "Sincere@april.biz";
 
                 var loginUser = users.FirstOrDefault(x =>
